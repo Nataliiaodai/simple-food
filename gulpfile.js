@@ -1,13 +1,21 @@
+const {
+  src,
+  dest,
+  watch,
+  parallel,
+  series
+} = require('gulp');
 
-const { src, dest, watch, parallel, series } = require('gulp');
-
-const scss            = require('gulp-sass')(require('sass'));
-const concat          = require('gulp-concat');
-const autoprefixer    = require('gulp-autoprefixer');
-const uglify          = require('gulp-uglify');
-const imagemin        = require('gulp-imagemin');
-const del             = require('del');
-const browserSync     = require('browser-sync').create();
+const scss = require('gulp-sass')(require('sass'));
+const concat = require('gulp-concat');
+const autoprefixer = require('gulp-autoprefixer');
+const uglify = require('gulp-uglify');
+const imagemin = require('gulp-imagemin');
+const del = require('del');
+const browserSync = require('browser-sync').create();
+const svgstore = require('gulp-svgstore');
+const ttf2woff = require('gulp-ttf2woff');
+const ttf2woff2 = require('gulp-ttf2woff2');
 
 
 function browsersync() {
@@ -47,35 +55,63 @@ function scripts() {
     .pipe(browserSync.stream())
 }
 
-function images(){
+function fonts() {
+  src(path.src.fonts)
+    .pipe(ttf2woff())
+    .pipe(dest(path.build.fonts));
+ return src(path.src.fonts)
+    .pipe(ttf2woff2())
+    .pipe(dest(path.build.fonts));
+};
+
+
+
+function images() {
   return src('app/images/**/*.*')
     .pipe(imagemin([
-      imagemin.gifsicle({interlaced: true}),
-      imagemin.mozjpeg({quality: 75, progressive: true}),
-      imagemin.optipng({optimizationLevel: 5}),
+      imagemin.gifsicle({
+        interlaced: true
+      }),
+      imagemin.mozjpeg({
+        quality: 75,
+        progressive: true
+      }),
+      imagemin.optipng({
+        optimizationLevel: 5
+      }),
       imagemin.svgo({
-        plugins: [
-          {removeViewBox: true},
-          {cleanupIDs: false}
+        plugins: [{
+            removeViewBox: true
+          },
+          {
+            cleanupIDs: false
+          }
         ]
       })
-      ]))
+    ]))
     .pipe(dest('dist/images'))
 }
 
+function svgSprite() {
+  return src('app/images/**/*.svg')
+    .pipe(svgstore())
+    .pipe(dest('./app/images'))
+}
 
 function build() {
-  return src ([
-    'app/**/*.html',
-    'app/css/style.min.css',
-    'app/js/main.min.js'
-  ], {base: 'app'})
-  .pipe(dest('dist'))
+  return src([
+      'app/**/*.html',
+      'app/css/style.min.css',
+      'app/js/main.min.js'
+    ], {
+      base: 'app'
+    })
+    .pipe(dest('dist'))
 }
 
 
 function cleanDist() {
-  return del ('dist')
+  return del('dist')
 }
 
 
@@ -85,7 +121,8 @@ function watching() {
   watch(['app/**/*.html']).on('change', browserSync.reload)
 }
 
-
+fonts
+exports.fonts = fonts;
 exports.styles = styles;
 exports.scripts = scripts;
 exports.browsersync = browsersync;
@@ -95,4 +132,4 @@ exports.cleanDist = cleanDist;
 exports.build = series(cleanDist, images, build);
 
 
-exports.default = parallel(styles, scripts, browsersync, watching);
+exports.default = parallel(styles, svgSprite, scripts, browsersync, watching);
